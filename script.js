@@ -228,8 +228,8 @@ function renderBoard() {
   boardCtx.fillRect(0, 0, W, H);
 
   // Grid lines
-  boardCtx.strokeStyle = 'rgba(123,79,255,0.10)';
-  boardCtx.lineWidth = 0.5;
+  boardCtx.strokeStyle = 'rgba(123,79,255,0.20)';
+  boardCtx.lineWidth = 0.8;
   for (let c = 0; c <= COLS; c++) {
     boardCtx.beginPath();
     boardCtx.moveTo(c * cellSize, 0);
@@ -372,16 +372,11 @@ function roundRect(ctx, x, y, w, h, r) {
 
 /* ─── PIECE TRAY RENDERING ───────────────────────── */
 function renderPieceTray() {
-  const isMobile = window.innerWidth <= 700;
-  const slotPrefix = isMobile ? 'mobile-piece-slot-' : 'piece-slot-';
-
   for (let i = 0; i < PIECE_COUNT; i++) {
-    // Desktop + mobile slots
     ['piece-slot-', 'mobile-piece-slot-'].forEach(prefix => {
       const slot = document.getElementById(prefix + i);
       if (!slot) return;
 
-      // Remove old canvas
       let c = slot.querySelector('canvas');
       if (!c) { c = document.createElement('canvas'); slot.appendChild(c); }
       const ctx = c.getContext('2d');
@@ -396,9 +391,18 @@ function renderPieceTray() {
 
       const pCols = p.shape[0].length;
       const pRows = p.shape.length;
-      const slotW = slot.offsetWidth || 120;
-      const slotH = slot.offsetHeight || 90;
-      const cs = Math.min(Math.floor((slotW - 16) / pCols), Math.floor((slotH - 16) / pRows), 24);
+
+      // Use fixed fallback sizes — don't rely on offsetWidth which can be 0
+      const isMobile = prefix === 'mobile-piece-slot-';
+      const slotW = isMobile ? 90 : 120;
+      const slotH = isMobile ? 80 : 90;
+      const cs = Math.min(
+        Math.floor((slotW - 16) / pCols),
+        Math.floor((slotH - 16) / pRows),
+        22
+      );
+      if (cs < 4) return; // too small, skip
+
       const pw = pCols * cs;
       const ph = pRows * cs;
       c.width = pw; c.height = ph;
@@ -972,4 +976,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
   newGame();
   flashLoop();
+
+  // Re-render after layout fully paints (fixes blank pieces on first load)
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    resizeBoard();
+    renderPieceTray();
+  }));
 });
